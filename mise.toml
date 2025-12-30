@@ -1,0 +1,7 @@
+[tools]
+go = "1.25.5"
+python = "3.13.11"
+ruby = "3.4.8"
+
+[env]
+_.python.venv = { path = ".venv", create = true } # create the venv if it doesn't exist
