@@ -19,6 +19,7 @@ cd ruby && bundle install && cd ..
 2. Configure environment variables:
 ```bash
 cp .env.example .env
+# (located in repo root dir)
 # Edit .env with your API keys
 ```
 
