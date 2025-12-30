@@ -7,11 +7,7 @@ import os
 import subprocess
 import json
 
-
 load_dotenv()
-
-# Add parent directory to path to import from main.py
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 class ModelParam(BaseModel):
     model: str = Field(
@@ -25,7 +21,7 @@ def task_wrapper(input, hooks):
     Wrapper function that calls the run_agent function with parameters.
 
     Args:
-        input: The test case input containing the investment thesis
+        input: the input to run the eval with (in this case, location to get weather for)
         hooks: Braintrust hooks object containing metadata and parameters
 
     Returns:
@@ -37,7 +33,7 @@ def task_wrapper(input, hooks):
     # hooks.parameters contains Pydantic model instances, access fields directly
     params = hooks.parameters if hasattr(hooks, 'parameters') else {}
 
-    # Extract values from Pydantic models
+    # Extract param values from Pydantic models
     model = params.get("model").model if "model" in params and params.get("model") else "gpt-4o-mini"
 
     ruby_exc = 'ruby'
@@ -47,7 +43,7 @@ def task_wrapper(input, hooks):
 
     process = subprocess.run(
         [ruby_exc, 'agent.rb', model, location],
-        capture_output=True, # Capture stdout and stderr
+        capture_output=True, # Capture stdout and stderr, we'll use stdout for our eval later
         text=True
     )
 
@@ -72,15 +68,16 @@ def task_wrapper(input, hooks):
 
     print(f"The result from Ruby is: {result}")
 
-    return result
+    # this returns the output of the Ruby agent to the Eval()
+    return result 
 
-
+# This kicks off our Remote Eval
 Eval(
     "Weather Agent",
-    data=init_dataset(os.environ.get("BRAINTRUST_PARENT"), {"dataset": "WeatherLocations"}),
-    task=task_wrapper,
-    scores=[Factuality, Possible],
-    parameters={
+    data=init_dataset(os.environ.get("BRAINTRUST_PARENT"), {"dataset": "WeatherLocations"}), # dataset or data struct to get inputs from
+    task=task_wrapper, # the task you will evaluate, this should call the code which runs your agent
+    scores=[Factuality, Possible], # the scoring functions (or AutoEvals built-in scorers) to use
+    parameters={ 
         "model": ModelParam,
     }
 )
