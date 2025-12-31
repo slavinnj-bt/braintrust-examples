@@ -37,10 +37,14 @@ end
 # Grabbing the remote eval params from the Python subprocess
 model = ARGV[0]
 location = ARGV[1]
+system_prompt = ARGV[2]
 
 begin
   # Create a chat instance
   chat = RubyLLM.chat(model: model) # Use a model that supports tools
+
+  # Set the initial instruction
+  chat.with_instructions system_prompt
 
   # Instantiate your tool if it requires arguments, otherwise use the class
   weather_tool = Weather.new
