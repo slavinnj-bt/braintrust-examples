@@ -4,6 +4,8 @@ This example evaluates a Ruby LLM agent using Python and Braintrust. The Ruby ag
 
 In this example, we use a Python "shim" to facilitate remote evals for agents written in languages for which Braintrust SDKs do not yet support native remote evals. The same process would work with the Typescript SDK.
 
+Video Demo: [Loom](https://www.loom.com/share/9a0626ea3b1244ebb09188509061a382)
+
 What is a [remote eval?](https://www.braintrust.dev/docs/guides/remote-evals)
 
 ## Setup
