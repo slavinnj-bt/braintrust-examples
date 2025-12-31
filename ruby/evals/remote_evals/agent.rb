@@ -5,6 +5,10 @@
 require 'ruby_llm'
 require 'json'
 
+# for tracing
+require "braintrust"
+require "opentelemetry/sdk"
+
 # Set default encoding
 Encoding.default_external = Encoding::UTF_8
 Encoding.default_internal = Encoding::UTF_8
@@ -34,33 +38,50 @@ RubyLLM.configure do |config|
   config.anthropic_api_key = ENV.fetch('ANTHROPIC_API_KEY', nil)
 end
 
+Braintrust.init(
+  blocking_login: false,
+  default_project: ENV.fetch('BRAINTRUST_PARENT', nil)
+)
+Braintrust::Trace::Contrib::Github::Crmne::RubyLLM.wrap
+tracer = OpenTelemetry.tracer_provider.tracer("weather-agent")
+
 # Grabbing the remote eval params from the Python subprocess
 model = ARGV[0]
 location = ARGV[1]
 system_prompt = ARGV[2]
 
 begin
-  # Create a chat instance
-  chat = RubyLLM.chat(model: model) # Use a model that supports tools
+  # Create a root span to nest all chat and tool operations
+  tracer.in_span("weather_agent", kind: :client) do |root_span|
 
-  # Set the initial instruction
-  chat.with_instructions system_prompt
+    # Create a chat instance
+    chat = RubyLLM.chat(model: model) # Use a model that supports tools
 
-  # Instantiate your tool if it requires arguments, otherwise use the class
-  weather_tool = Weather.new
+    # Set the initial instruction
+    chat.with_instructions system_prompt
 
-  # Add the tool(s) to the chat
-  chat.with_tool(weather_tool)
+    # Instantiate your tool if it requires arguments, otherwise use the class
+    weather_tool = Weather.new
 
-  question = "What's the current weather like in " + location
-  response = chat.ask question
+    # Add the tool(s) to the chat
+    chat.with_tool(weather_tool)
 
-  # Output JSON to stdout
-  output = {
-    result: response.content,
-    status: "success"
-  }
-  puts JSON.generate(output)
+    # Ask the question - RubyLLM instrumentation will automatically trace this
+    question = "What's the current weather like in " + location
+    response = chat.ask question
+
+    root_span.set_attribute("response_length", response.content.length)
+
+    # Output JSON to stdout
+    output = {
+      result: response.content,
+      status: "success"
+    }
+    puts JSON.generate(output)
+  end
+
+  # Ensure all spans are flushed before exit
+  OpenTelemetry.tracer_provider.shutdown
 
 rescue => e
   # Output error as JSON
@@ -72,4 +93,5 @@ rescue => e
   }
   puts JSON.generate(error_output)
   exit 1
+
 end

@@ -82,10 +82,13 @@ def task_wrapper(input, hooks):
         sys.exit("CD to /ruby/evals/remote_evals before running remote eval")
 
     # add system_prompt param
+    # Pass environment variables to Ruby subprocess
+    env = os.environ.copy()
     process = subprocess.run(
         [ruby_exc, 'agent.rb', model, location, system_prompt],
         capture_output=True, # Capture stdout and stderr, we'll use stdout for our eval later
-        text=True
+        text=True,
+        env=env  # Pass environment variables including API keys
     )
 
     # Check if the subprocess failed

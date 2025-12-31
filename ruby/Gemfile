@@ -3,3 +3,5 @@
 source "https://rubygems.org"
 
 gem "ruby_llm", "~> 1.9"
+gem "braintrust"
+gem "opentelemetry-sdk"
