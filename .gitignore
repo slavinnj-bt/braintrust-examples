@@ -3,3 +3,55 @@ go/
 .env
 __pycache__
 .venv
+
+# === Node/TS === #
+
+# Dependencies
+node_modules
+.npm
+.pnpm-store
+.yarn-integrity
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Compiled JavaScript and source map files
+# Adjust the 'dist' and 'build' paths based on your project's `outDir` in tsconfig.json
+/dist
+/build
+*.js.map
+*.d.ts.map
+# If you check in your build artifacts, remove the above lines.
+# The following lines are for ignoring compiled files in the source directory if not using a separate output dir
+# *.js
+# *.d.ts
+
+# Logs and temporary files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.log
+.tmp
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.vscode-test
+
+# Editors and OS files
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea
+.cache
+.parcel-cache
+.eslintcache
+.stylelintcache
+*.swp
+*~
+.DS_Store
+Thumbs.db

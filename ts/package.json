@@ -1,0 +1,19 @@
+{
+  "name": "langgraph-root-span-example",
+  "version": "1.0.0",
+  "description": "LangGraph multi-turn conversation with Braintrust root span pattern",
+  "main": "langgraph-root-span-example.ts",
+  "scripts": {
+    "start": "tsx langgraph-root-span-example.ts"
+  },
+  "dependencies": {
+    "@langchain/core": "^1.1.12",
+    "@langchain/langgraph": "^1.0.13",
+    "@langchain/openai": "^1.2.1",
+    "braintrust": "^1.1.1",
+    "dotenv": "^17.2.3"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0"
+  }
+}
