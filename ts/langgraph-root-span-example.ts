@@ -1,13 +1,25 @@
 /**
- * LangGraph Multi-Turn Conversation with Root Span Pattern
- *
- * This example demonstrates:
- * 1. Creating a ROOT SPAN that persists across multiple turns
- * 2. Creating CHILD SPANS for each turn/operation
- * 3. Logging data to the root span from within child spans
- * 4. Logging final results to the root span AFTER all child spans complete
- *
- * Pattern follows: https://www.braintrust.dev/docs/cookbook/recipes/Lovable#configure-logging-in-your-edge-function
+LangGraph Multi-Turn Conversation with Root Span Pattern
+This pattern shows how to maintain a reference to a root span and log data to it from child spans, ensuring the final result is logged AFTER all child operations complete.
+
+
+The root span is passed through your application state, allowing child operations to log summary data back to it while maintaining their own detailed child spans.
+
+```
+Root Span (multi_turn_conversation)
+├── Input: logged FIRST
+├── Child Span 1 (turn_1)
+│   ├── Logs its own input/output
+│   └── Also logs summary back to ROOT SPAN
+├── Child Span 2 (turn_2)
+│   ├── Logs its own input/output
+│   └── Also logs summary back to ROOT SPAN
+├── Child Span 3 (turn_3)
+│   └── Same pattern...
+└── Output: logged LAST (after all children complete)
+```
+
+ * See https://www.braintrust.dev/docs/cookbook/recipes/Lovable for another example.
  */
 
 import "dotenv/config";
@@ -191,12 +203,6 @@ async function runMultiTurnConversation() {
     name: "multi_turn_conversation",
     tags: ["langgraph", "conversation", "multi-turn"],
   });
-
-  console.log("\nView your traces at: https://www.braintrust.dev");
-  console.log("\nIn the Braintrust UI, you'll see:");
-  console.log("- Root span with complete conversation input/output");
-  console.log("- Child spans for each turn (turn_1, turn_2, turn_3)");
-  console.log("- Metadata showing progression through turns");
 
   // Flush to ensure all spans are sent to Braintrust
   await logger.flush();
