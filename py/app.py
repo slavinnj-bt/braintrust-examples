@@ -16,7 +16,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 
 from braintrust import init_logger
-from braintrust_langchain import BraintrustCallbackHandler, set_global_handler
+from braintrust_langchain import BraintrustCallbackHandler
 
 import chainlit as cl
 
@@ -32,8 +32,8 @@ except Exception:
 # )
 
 logger = init_logger(project="SlavinScratchArea", api_key=os.environ.get("BRAINTRUST_API_KEY"))
+# Create handler but don't set as global - we'll pass it explicitly to avoid duplicate spans
 handler = BraintrustCallbackHandler()
-set_global_handler(handler)
 
 
 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
@@ -99,6 +99,9 @@ async def on_chat_start():
         input={"document": file.name, "num_chunks": len(texts)},
         span_attributes={"type": "session"}
     )
+
+    # Set the session span as current to ensure proper hierarchy
+    session_span.set_current()
 
     # Let the user know that the system is ready
     msg.content = f"Processing `{file.name}` done. You can now ask questions!"
