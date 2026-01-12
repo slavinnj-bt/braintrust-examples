@@ -3,3 +3,4 @@ go/
 .env
 __pycache__
 .venv
+py/.chainlit/translations
