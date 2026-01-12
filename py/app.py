@@ -8,17 +8,20 @@ from langchain_community.document_loaders import PyPDFLoader
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
+# TODO: add more AI providers
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
+from langchain_community.tools.tavily_search import TavilySearchResults
 
 from braintrust import init_logger, Attachment
 from braintrust_langchain import BraintrustCallbackHandler
 
 import chainlit as cl
+import json
 
 # Explicitly disable LiteralAI instrumentation after chainlit import
 try:
@@ -37,6 +40,30 @@ handler = BraintrustCallbackHandler()
 
 
 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+
+# Initialize Tavily search tool for web search capabilities
+tavily_search = TavilySearchResults(max_results=3)
+
+# Define the tool for OpenAI function calling
+tools = [
+    {
+        "type": "function",
+        "function": {
+            "name": "tavily_search",
+            "description": "Search the web for current information. Use this when you need up-to-date information about laws, regulations, legal precedents, or other information not contained in the document.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The search query to find relevant information"
+                    }
+                },
+                "required": ["query"]
+            }
+        }
+    }
+]
 
 # Use plain AsyncOpenAI client - Braintrust will trace via the logger spans
 client = AsyncOpenAI()
@@ -203,20 +230,116 @@ async def main(message: cl.Message):
         llm_span.set_current()
 
         try:
-            # Stream the response using OpenAI client directly
+            # Stream the response using OpenAI client with tool support
             answer = ""
+            tool_calls = []
+            current_tool_call = None
+
             stream = await client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=messages,
                 temperature=0,
+                tools=tools,
                 stream=True
             )
 
             async for chunk in stream:
-                if chunk.choices[0].delta.content:
-                    content = chunk.choices[0].delta.content
+                delta = chunk.choices[0].delta
+
+                # Handle tool calls
+                if delta.tool_calls:
+                    for tool_call_delta in delta.tool_calls:
+                        if tool_call_delta.index is not None:
+                            # Start a new tool call or continue existing one
+                            if current_tool_call is None or tool_call_delta.index != current_tool_call.get("index"):
+                                if current_tool_call:
+                                    tool_calls.append(current_tool_call)
+                                current_tool_call = {
+                                    "index": tool_call_delta.index,
+                                    "id": tool_call_delta.id or "",
+                                    "type": "function",
+                                    "function": {
+                                        "name": tool_call_delta.function.name or "",
+                                        "arguments": tool_call_delta.function.arguments or ""
+                                    }
+                                }
+                            else:
+                                # Continue building the current tool call
+                                if tool_call_delta.function.arguments:
+                                    current_tool_call["function"]["arguments"] += tool_call_delta.function.arguments
+
+                # Handle regular content
+                if delta.content:
+                    content = delta.content
                     answer += content
                     await msg.stream_token(content)
+
+            # Add any remaining tool call
+            if current_tool_call:
+                tool_calls.append(current_tool_call)
+
+            # If there are tool calls, execute them
+            if tool_calls:
+                for tool_call in tool_calls:
+                    if tool_call["function"]["name"] == "tavily_search":
+                        # Parse the arguments
+                        args = json.loads(tool_call["function"]["arguments"])
+                        query = args.get("query", "")
+
+                        # Execute the search with a child span
+                        search_span = llm_span.start_span(
+                            name="tavily_search",
+                            input={"query": query},
+                            span_attributes={"type": "tool"}
+                        )
+                        search_span.set_current()
+
+                        try:
+                            # Execute the Tavily search
+                            search_results = await tavily_search.ainvoke(query, config={"callbacks": [handler]})
+
+                            # Log search results
+                            search_span.log(output={"results": search_results})
+
+                            # Add tool result to messages
+                            messages.append({
+                                "role": "assistant",
+                                "content": None,
+                                "tool_calls": [{
+                                    "id": tool_call["id"],
+                                    "type": "function",
+                                    "function": {
+                                        "name": "tavily_search",
+                                        "arguments": tool_call["function"]["arguments"]
+                                    }
+                                }]
+                            })
+                            messages.append({
+                                "role": "tool",
+                                "tool_call_id": tool_call["id"],
+                                "content": str(search_results)
+                            })
+
+                            # Stream a message about the search
+                            search_msg = f"\n\n[Searching the web for: {query}]\n\n"
+                            answer += search_msg
+                            await msg.stream_token(search_msg)
+                        finally:
+                            search_span.end()
+
+                # Make another call to get the final response with search results
+                final_stream = await client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=messages,
+                    temperature=0,
+                    stream=True
+                )
+
+                async for chunk in final_stream:
+                    if chunk.choices[0].delta.content:
+                        content = chunk.choices[0].delta.content
+                        answer += content
+                        await msg.stream_token(content)
 
             # Log the completion
             llm_span.log(output={"content": answer})
