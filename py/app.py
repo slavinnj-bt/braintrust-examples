@@ -15,7 +15,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 
-from braintrust import init_logger
+from braintrust import init_logger, Attachment
 from braintrust_langchain import BraintrustCallbackHandler
 
 import chainlit as cl
@@ -48,7 +48,7 @@ async def on_chat_start():
     # Wait for the user to upload a file
     while files is None:
         files = await cl.AskFileMessage(
-            content="Please upload a text file to begin!",
+            content="Hi, I'm Allex! Upload your document!",
             accept=["application/pdf"],
             max_size_mb=20,
             timeout=180,
@@ -93,10 +93,22 @@ async def on_chat_start():
 
     retriever = docsearch.as_retriever()
 
-    # Create a root span for the entire conversation session
+    # Read the PDF file for attachment
+    with open(file.path, "rb") as pdf_file:
+        pdf_attachment = Attachment(
+            data=pdf_file.read(),
+            filename=file.name,
+            content_type="application/pdf"
+        )
+
+    # Create a root span for the entire conversation session with PDF attached
     session_span = logger.start_span(
         name="conversation_session",
-        input={"document": file.name, "num_chunks": len(texts)},
+        input={
+            "document": file.name,
+            "num_chunks": len(texts),
+            "attachments": [pdf_attachment]
+        },
         span_attributes={"type": "session"}
     )
 
