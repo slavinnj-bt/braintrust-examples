@@ -136,7 +136,7 @@ async def on_chat_start():
             "num_chunks": len(texts),
             "attachments": [pdf_attachment]
         },
-        span_attributes={"type": "session"}
+        span_attributes={"type": "task"}
     )
 
     # Set the session span as current to ensure proper hierarchy
@@ -161,15 +161,22 @@ async def main(message: cl.Message):
     # Get turn number for tracking
     turn_number = len([m for m in message_history.messages if m.type == "human"]) + 1
 
+    # Format chat history for logging
+    chat_history = [
+        {"role": "user" if msg.type == "human" else "assistant", "content": msg.content}
+        for msg in message_history.messages
+    ]
+
     # Start a Braintrust span for this conversation turn as a child of the session span
     span = session_span.start_span(
         name="conversation_turn",
         input={
             "question": message.content,
             "turn_number": turn_number,
-            "history_length": len(message_history.messages)
+            "history_length": len(message_history.messages),
+            "chat_history": chat_history
         },
-        span_attributes={"type": "chain"}
+        span_attributes={"type": "task"}
     )
 
     # Set this span as the active context so nested operations will be children
@@ -273,6 +280,8 @@ async def main(message: cl.Message):
                     content = delta.content
                     answer += content
                     await msg.stream_token(content)
+                    # Log the output continuously as we stream
+                    span.log(output={"answer": answer, "turn_number": turn_number})
 
             # Add any remaining tool call
             if current_tool_call:
@@ -340,6 +349,8 @@ async def main(message: cl.Message):
                         content = chunk.choices[0].delta.content
                         answer += content
                         await msg.stream_token(content)
+                        # Log the output continuously as we stream
+                        span.log(output={"answer": answer, "turn_number": turn_number})
 
             # Log the completion
             llm_span.log(output={"content": answer})
@@ -348,9 +359,6 @@ async def main(message: cl.Message):
 
         # Add AI response to history
         message_history.add_ai_message(answer)
-
-        # Log the final output
-        span.log(output={"answer": answer, "turn_number": turn_number})
     finally:
         span.end()
 
@@ -383,5 +391,15 @@ async def on_chat_end():
     if session_span:
         message_history = cl.user_session.get("message_history")
         total_turns = len([m for m in message_history.messages if m.type == "human"])
-        session_span.log(output={"total_turns": total_turns})
+
+        # Format full conversation history for evaluation
+        full_conversation = [
+            {"role": "user" if msg.type == "human" else "assistant", "content": msg.content}
+            for msg in message_history.messages
+        ]
+
+        session_span.log(output={
+            "total_turns": total_turns,
+            "full_conversation": full_conversation
+        })
         session_span.end()
