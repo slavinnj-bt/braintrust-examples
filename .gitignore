@@ -4,3 +4,4 @@ go/
 __pycache__
 .venv
 py/.chainlit/translations
+py/.files
