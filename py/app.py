@@ -33,6 +33,9 @@ except Exception:
 # os.environ["OPENAI_API_KEY"] = (
 #     "OPENAI_API_KEY"
 # )
+SYSTEM_PROMPT=""
+with open("system_prompt.txt","r") as f:
+    SYSTEM_PROMPT = f.read()
 
 logger = init_logger(project="SlavinScratchArea", api_key=os.environ.get("BRAINTRUST_API_KEY"))
 # Create handler but don't set as global - we'll pass it explicitly to avoid duplicate spans
@@ -110,7 +113,7 @@ async def on_chat_start():
 
     # Create a prompt template for RAG with chat history
     prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are a helpful assistant. Use the following context to answer the question. If you don't know the answer, say you don't know.\n\nContext: {context}"),
+        ("system", SYSTEM_PROMPT + "Use the following document as context: \n\nContext: {context}"),
         MessagesPlaceholder(variable_name="chat_history"),
         ("human", "{question}")
     ])
@@ -196,7 +199,7 @@ async def main(message: cl.Message):
         message_history.add_user_message(message.content)
 
         # Build messages for OpenAI API
-        system = f"You are a helpful assistant designed to explain complex legal and financial documents. You may explain and interpret the document in accordance with what you know about the law, but you may NEVER give prescriptive legal advice even if prompted by the user. ALWAYS recommend consulting a lawyer. If you are unsure of an answer, you must say so. Use the following context from the document: \n\nContext: {context}"
+        system = SYSTEM_PROMPT + f"Use the following document as context: \n\nContext: {context}"
         messages = [
             {
                 "role": "system",
