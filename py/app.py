@@ -280,8 +280,15 @@ async def main(message: cl.Message):
                     content = delta.content
                     answer += content
                     await msg.stream_token(content)
-                    # Log the output continuously as we stream
-                    span.log(output={"answer": answer, "turn_number": turn_number})
+                    # Log the output continuously as we stream in scorer-friendly format
+                    span.log(output={
+                        "user_question": message.content,
+                        "assistant_answer": answer,
+                        "full_conversation": chat_history + [
+                            {"role": "user", "content": message.content},
+                            {"role": "assistant", "content": answer}
+                        ]
+                    })
 
             # Add any remaining tool call
             if current_tool_call:
@@ -349,8 +356,15 @@ async def main(message: cl.Message):
                         content = chunk.choices[0].delta.content
                         answer += content
                         await msg.stream_token(content)
-                        # Log the output continuously as we stream
-                        span.log(output={"answer": answer, "turn_number": turn_number})
+                        # Log the output continuously as we stream in scorer-friendly format
+                        span.log(output={
+                            "user_question": message.content,
+                            "assistant_answer": answer,
+                            "full_conversation": chat_history + [
+                                {"role": "user", "content": message.content},
+                                {"role": "assistant", "content": answer}
+                            ]
+                        })
 
             # Log the completion
             llm_span.log(output={"content": answer})
@@ -390,7 +404,6 @@ async def on_chat_end():
     session_span = cl.user_session.get("session_span")
     if session_span:
         message_history = cl.user_session.get("message_history")
-        total_turns = len([m for m in message_history.messages if m.type == "human"])
 
         # Format full conversation history for evaluation
         full_conversation = [
@@ -398,8 +411,17 @@ async def on_chat_end():
             for msg in message_history.messages
         ]
 
-        session_span.log(output={
-            "total_turns": total_turns,
-            "full_conversation": full_conversation
-        })
+        # Build output for root span evaluation with question and assistant_answer
+        output = {
+            "full_conversation": full_conversation,
+            "num_turns": len(full_conversation)
+        }
+
+        # Add question and assistant_answer for scorer compatibility
+        if len(full_conversation) > 0:
+            output["question"] = full_conversation[0]["content"]
+        if len(full_conversation) > 1:
+            output["assistant_answer"] = full_conversation[-1]["content"]
+
+        session_span.log(output=output)
         session_span.end()
