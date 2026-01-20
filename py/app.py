@@ -4,12 +4,13 @@ import os
 os.environ["LITERAL_DISABLE_INSTRUMENTATION"] = "true"
 
 from openai import AsyncOpenAI
+from anthropic import AsyncAnthropic
 from langchain_community.document_loaders import PyPDFLoader
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
-# TODO: add more AI providers
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_anthropic import ChatAnthropic
 
 from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -30,9 +31,18 @@ try:
 except Exception:
     pass  # If it fails, continue anyway
 
-# os.environ["OPENAI_API_KEY"] = (
-#     "OPENAI_API_KEY"
-# )
+# Configure provider via environment variable (simpler than CLI args)
+# Set AI_PROVIDER=anthropic to use Anthropic, defaults to OpenAI
+PROVIDER = os.environ.get("AI_PROVIDER", "openai").lower()
+MODEL_NAME = os.environ.get("AI_MODEL", "")
+
+# Set provider-specific defaults if model not specified
+if not MODEL_NAME:
+    if PROVIDER == "anthropic":
+        MODEL_NAME = "claude-sonnet-4-5-20250929"
+    else:
+        MODEL_NAME = "gpt-4o-mini"
+
 SYSTEM_PROMPT=""
 with open("system_prompt.txt","r") as f:
     SYSTEM_PROMPT = f.read()
@@ -68,8 +78,29 @@ tools = [
     }
 ]
 
-# Use plain AsyncOpenAI client - Braintrust will trace via the logger spans
-client = AsyncOpenAI()
+# Define Anthropic tools format
+anthropic_tools = [
+    {
+        "name": "tavily_search",
+        "description": "Search the web for current information. Use this when you need up-to-date information about laws, regulations, legal precedents, or other information not contained in the document.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The search query to find relevant information"
+                }
+            },
+            "required": ["query"]
+        }
+    }
+]
+
+# Initialize client based on provider
+if PROVIDER == "openai":
+    client = AsyncOpenAI()
+elif PROVIDER == "anthropic":
+    client = AsyncAnthropic()
 
 @cl.on_chat_start
 async def on_chat_start():
@@ -118,8 +149,11 @@ async def on_chat_start():
         ("human", "{question}")
     ])
 
-    # Create the LLM
-    llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0, streaming=True)
+    # Create the LLM based on provider
+    if PROVIDER == "openai":
+        llm = ChatOpenAI(model_name=MODEL_NAME, temperature=0, streaming=True)
+    elif PROVIDER == "anthropic":
+        llm = ChatAnthropic(model_name=MODEL_NAME, temperature=0, streaming=True)
 
     retriever = docsearch.as_retriever()
 
@@ -233,65 +267,124 @@ async def main(message: cl.Message):
 
         # Log the LLM call within a child span of the turn span
         llm_span = span.start_span(
-            name="openai_chat_completion",
-            input={"model": "gpt-4o-mini", "messages": messages, "temperature": 0},
+            name=f"{PROVIDER}_chat_completion",
+            input={"model": MODEL_NAME, "messages": messages, "temperature": 0},
             span_attributes={"type": "llm"}
         )
         llm_span.set_current()
 
         try:
-            # Stream the response using OpenAI client with tool support
+            # Stream the response using the selected provider client with tool support
             answer = ""
             tool_calls = []
             current_tool_call = None
 
-            stream = await client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=messages,
-                temperature=0,
-                tools=tools,
-                stream=True
-            )
+            if PROVIDER == "openai":
+                stream = await client.chat.completions.create(
+                    model=MODEL_NAME,
+                    messages=messages,
+                    temperature=0,
+                    tools=tools,
+                    stream=True
+                )
 
-            async for chunk in stream:
-                delta = chunk.choices[0].delta
+                async for chunk in stream:
+                    delta = chunk.choices[0].delta
 
-                # Handle tool calls
-                if delta.tool_calls:
-                    for tool_call_delta in delta.tool_calls:
-                        if tool_call_delta.index is not None:
-                            # Start a new tool call or continue existing one
-                            if current_tool_call is None or tool_call_delta.index != current_tool_call.get("index"):
-                                if current_tool_call:
-                                    tool_calls.append(current_tool_call)
+                    # Handle tool calls
+                    if delta.tool_calls:
+                        for tool_call_delta in delta.tool_calls:
+                            if tool_call_delta.index is not None:
+                                # Start a new tool call or continue existing one
+                                if current_tool_call is None or tool_call_delta.index != current_tool_call.get("index"):
+                                    if current_tool_call:
+                                        tool_calls.append(current_tool_call)
+                                    current_tool_call = {
+                                        "index": tool_call_delta.index,
+                                        "id": tool_call_delta.id or "",
+                                        "type": "function",
+                                        "function": {
+                                            "name": tool_call_delta.function.name or "",
+                                            "arguments": tool_call_delta.function.arguments or ""
+                                        }
+                                    }
+                                else:
+                                    # Continue building the current tool call
+                                    if tool_call_delta.function.arguments:
+                                        current_tool_call["function"]["arguments"] += tool_call_delta.function.arguments
+
+                    # Handle regular content
+                    if delta.content:
+                        content = delta.content
+                        answer += content
+                        await msg.stream_token(content)
+                        # Log the output continuously as we stream in scorer-friendly format
+                        span.log(output={
+                            "user_question": message.content,
+                            "assistant_answer": answer,
+                            "full_conversation": chat_history + [
+                                {"role": "user", "content": message.content},
+                                {"role": "assistant", "content": answer}
+                            ]
+                        })
+
+            elif PROVIDER == "anthropic":
+                # Convert messages to Anthropic format
+                anthropic_messages = []
+                system_message = None
+                for message_dict in messages:
+                    if message_dict["role"] == "system":
+                        system_message = message_dict["content"]
+                    else:
+                        anthropic_messages.append({
+                            "role": message_dict["role"],
+                            "content": message_dict["content"]
+                        })
+
+                stream = await client.messages.create(
+                    model=MODEL_NAME,
+                    max_tokens=4096,
+                    temperature=0,
+                    system=system_message,
+                    messages=anthropic_messages,
+                    tools=anthropic_tools,
+                    stream=True
+                )
+
+                async for event in stream:
+                    if event.type == "content_block_start":
+                        if hasattr(event.content_block, "type"):
+                            if event.content_block.type == "tool_use":
                                 current_tool_call = {
-                                    "index": tool_call_delta.index,
-                                    "id": tool_call_delta.id or "",
+                                    "index": event.index,
+                                    "id": event.content_block.id,
                                     "type": "function",
                                     "function": {
-                                        "name": tool_call_delta.function.name or "",
-                                        "arguments": tool_call_delta.function.arguments or ""
+                                        "name": event.content_block.name,
+                                        "arguments": ""
                                     }
                                 }
-                            else:
-                                # Continue building the current tool call
-                                if tool_call_delta.function.arguments:
-                                    current_tool_call["function"]["arguments"] += tool_call_delta.function.arguments
-
-                # Handle regular content
-                if delta.content:
-                    content = delta.content
-                    answer += content
-                    await msg.stream_token(content)
-                    # Log the output continuously as we stream in scorer-friendly format
-                    span.log(output={
-                        "user_question": message.content,
-                        "assistant_answer": answer,
-                        "full_conversation": chat_history + [
-                            {"role": "user", "content": message.content},
-                            {"role": "assistant", "content": answer}
-                        ]
-                    })
+                    elif event.type == "content_block_delta":
+                        if hasattr(event.delta, "type"):
+                            if event.delta.type == "text_delta":
+                                content = event.delta.text
+                                answer += content
+                                await msg.stream_token(content)
+                                span.log(output={
+                                    "user_question": message.content,
+                                    "assistant_answer": answer,
+                                    "full_conversation": chat_history + [
+                                        {"role": "user", "content": message.content},
+                                        {"role": "assistant", "content": answer}
+                                    ]
+                                })
+                            elif event.delta.type == "input_json_delta":
+                                if current_tool_call:
+                                    current_tool_call["function"]["arguments"] += event.delta.partial_json
+                    elif event.type == "content_block_stop":
+                        if current_tool_call:
+                            tool_calls.append(current_tool_call)
+                            current_tool_call = None
 
             # Add any remaining tool call
             if current_tool_call:
@@ -347,27 +440,100 @@ async def main(message: cl.Message):
                             search_span.end()
 
                 # Make another call to get the final response with search results
-                final_stream = await client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=messages,
-                    temperature=0,
-                    stream=True
-                )
+                if PROVIDER == "openai":
+                    final_stream = await client.chat.completions.create(
+                        model=MODEL_NAME,
+                        messages=messages,
+                        temperature=0,
+                        stream=True
+                    )
 
-                async for chunk in final_stream:
-                    if chunk.choices[0].delta.content:
-                        content = chunk.choices[0].delta.content
-                        answer += content
-                        await msg.stream_token(content)
-                        # Log the output continuously as we stream in scorer-friendly format
-                        span.log(output={
-                            "user_question": message.content,
-                            "assistant_answer": answer,
-                            "full_conversation": chat_history + [
-                                {"role": "user", "content": message.content},
-                                {"role": "assistant", "content": answer}
-                            ]
-                        })
+                    async for chunk in final_stream:
+                        if chunk.choices[0].delta.content:
+                            content = chunk.choices[0].delta.content
+                            answer += content
+                            await msg.stream_token(content)
+                            # Log the output continuously as we stream in scorer-friendly format
+                            span.log(output={
+                                "user_question": message.content,
+                                "assistant_answer": answer,
+                                "full_conversation": chat_history + [
+                                    {"role": "user", "content": message.content},
+                                    {"role": "assistant", "content": answer}
+                                ]
+                            })
+
+                elif PROVIDER == "anthropic":
+                    # Convert messages to Anthropic format for final call
+                    anthropic_messages = []
+                    system_message = None
+                    assistant_content_blocks = []
+
+                    for message_dict in messages:
+                        if message_dict["role"] == "system":
+                            system_message = message_dict["content"]
+                        elif message_dict["role"] == "tool":
+                            # Convert tool response to user message for Anthropic
+                            anthropic_messages.append({
+                                "role": "user",
+                                "content": [
+                                    {
+                                        "type": "tool_result",
+                                        "tool_use_id": message_dict["tool_call_id"],
+                                        "content": message_dict["content"]
+                                    }
+                                ]
+                            })
+                        elif message_dict.get("tool_calls"):
+                            # Build assistant message with tool_use blocks for Anthropic
+                            assistant_content_blocks = []
+                            # Add text content if there is any
+                            if answer:
+                                assistant_content_blocks.append({
+                                    "type": "text",
+                                    "text": answer
+                                })
+                            # Add tool_use blocks
+                            for tc in message_dict["tool_calls"]:
+                                assistant_content_blocks.append({
+                                    "type": "tool_use",
+                                    "id": tc["id"],
+                                    "name": tc["function"]["name"],
+                                    "input": json.loads(tc["function"]["arguments"])
+                                })
+                            anthropic_messages.append({
+                                "role": "assistant",
+                                "content": assistant_content_blocks
+                            })
+                        else:
+                            anthropic_messages.append({
+                                "role": message_dict["role"],
+                                "content": message_dict["content"]
+                            })
+
+                    final_stream = await client.messages.create(
+                        model=MODEL_NAME,
+                        max_tokens=4096,
+                        temperature=0,
+                        system=system_message,
+                        messages=anthropic_messages,
+                        stream=True
+                    )
+
+                    async for event in final_stream:
+                        if event.type == "content_block_delta":
+                            if hasattr(event.delta, "type") and event.delta.type == "text_delta":
+                                content = event.delta.text
+                                answer += content
+                                await msg.stream_token(content)
+                                span.log(output={
+                                    "user_question": message.content,
+                                    "assistant_answer": answer,
+                                    "full_conversation": chat_history + [
+                                        {"role": "user", "content": message.content},
+                                        {"role": "assistant", "content": answer}
+                                    ]
+                                })
 
             # Log the completion
             llm_span.log(output={"content": answer})
