@@ -29,28 +29,6 @@ Minimal reproduction case for Braintrust tracing issue in ADK-Web where only the
 - **Google AI**: https://aistudio.google.com/apikey
 - **Braintrust**: https://www.braintrust.dev/app/settings
 
-## The Issue
-
-**Problem**: Only the first agent invocation gets traced to Braintrust. Subsequent invocations in the same session are not traced.
-
-**Root Cause**: ADK-Web loads agent modules lazily during the first request (not at server startup). When `setup_adk()` runs mid-request, Braintrust's context variables become polluted, preventing subsequent traces from being created.
-
-**Expected**: Each agent invocation should create a separate trace in Braintrust.
-
-**Actual**: Only the first invocation per agent creates a trace.
-
-**📄 See [BUG_REPORT.md](BUG_REPORT.md) for detailed analysis and proposed fixes.**
-
-## Verification Steps
-
-1. Start the server and open the web UI
-2. Send 3 different messages to the agent:
-   - "What's the weather in New York?"
-   - "What about London?"
-   - "What time is it?"
-3. Check the Braintrust dashboard at https://www.braintrust.dev/
-4. Look for project: `adk-web-tracing-test`
-5. **Bug**: You'll see only 1 trace instead of 3
 
 ## Files
 
