@@ -67,9 +67,21 @@ Minimal reproduction case for Braintrust tracing issue in ADK-Web where only the
         └── .env.example        # Example configuration
 ```
 
+## Agent Capabilities
+
+The agent uses Google Search to answer questions with current web information:
+- **google_search**: Google Search integration for real-time web information (Gemini 2.0+ only)
+
+Example queries:
+- "What's the weather in New York?"
+- "What's the latest news about AI?"
+- "What time is it in Tokyo?"
+- "Tell me about the Python programming language"
+
 ## Notes
 
-- The agent uses mock weather data (no external API calls)
+- The agent uses `google_search` tool which requires Gemini 2.0+ models
+- **Important**: `google_search` can only be used by itself (no other custom function tools allowed per ADK design)
 - Braintrust tracing is configured via `setup_adk()` in agent.py
 - Environment variables are loaded in agent.py before creating the agent
 - The server uses standard ADK CLI: `adk web --port 3000 ./agents`
