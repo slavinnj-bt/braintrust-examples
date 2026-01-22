@@ -33,11 +33,13 @@ Minimal reproduction case for Braintrust tracing issue in ADK-Web where only the
 
 **Problem**: Only the first agent invocation gets traced to Braintrust. Subsequent invocations in the same session are not traced.
 
-**Cause**: ADK-Web caches `Runner` instances across HTTP requests. Braintrust's context isolation (using Python `contextvars`) doesn't properly isolate between cached runner invocations.
+**Root Cause**: ADK-Web loads agent modules lazily during the first request (not at server startup). When `setup_adk()` runs mid-request, Braintrust's context variables become polluted, preventing subsequent traces from being created.
 
 **Expected**: Each agent invocation should create a separate trace in Braintrust.
 
 **Actual**: Only the first invocation per agent creates a trace.
+
+**📄 See [BUG_REPORT.md](BUG_REPORT.md) for detailed analysis and proposed fixes.**
 
 ## Verification Steps
 
@@ -55,6 +57,7 @@ Minimal reproduction case for Braintrust tracing issue in ADK-Web where only the
 ```
 .
 ├── README.md                    # This file
+├── BUG_REPORT.md               # Detailed bug analysis and proposed fixes
 ├── requirements.txt             # Python dependencies
 ├── setup.sh                     # Setup script
 ├── check_config.sh             # Verify API keys
@@ -62,7 +65,7 @@ Minimal reproduction case for Braintrust tracing issue in ADK-Web where only the
 └── agents/
     └── weather_agent/
         ├── __init__.py         # Package marker
-        ├── agent.py            # Weather agent with Braintrust tracing
+        ├── agent.py            # Minimal agent demonstrating the bug
         ├── .env                # API keys (add yours here)
         └── .env.example        # Example configuration
 ```

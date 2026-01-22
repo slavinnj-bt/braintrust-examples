@@ -1,4 +1,4 @@
-"""Simple weather agent for testing ADK-Web tracing."""
+
 
 import os
 from pathlib import Path
