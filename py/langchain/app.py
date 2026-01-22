@@ -1,3 +1,10 @@
+#TODO: clean up code
+# separate project in braintrust
+# create new online scoring
+# create new dataset entries
+# create human scores
+# create experiment and grab prompt slugs for versioning
+
 import os
 
 # Disable LiteralAI instrumentation to avoid conflicts with Braintrust
