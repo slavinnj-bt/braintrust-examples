@@ -219,9 +219,3 @@ pip install traceloop-sdk
 - [Braintrust LangChain Integration](https://www.braintrust.dev/docs/integrations/sdk-integrations/langchain)
 - [Braintrust Traceloop Integration](https://www.braintrust.dev/docs/integrations/sdk-integrations/traceloop)
 - [Traceloop Python Docs](https://www.traceloop.com/docs/openllmetry/getting-started-python)
-
-## Support
-
-For issues:
-- Braintrust: [Documentation](https://www.braintrust.dev/docs) or [GitHub Issues](https://github.com/braintrustdata/braintrust-sdk/issues)
-- Traceloop: [Documentation](https://www.traceloop.com/docs) or [GitHub Issues](https://github.com/traceloop/openllmetry/issues)

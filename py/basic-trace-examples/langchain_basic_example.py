@@ -22,7 +22,7 @@ load_dotenv()
 
 # Initialize Braintrust logger for tracing
 init_logger(
-    project="SlavinScratchArea",
+    project="python-tracing-example",
     api_key=os.environ.get("BRAINTRUST_API_KEY", ""),
 )
 
@@ -111,5 +111,3 @@ if __name__ == "__main__":
     run_conversation()
 
     print("\nConversation complete!")
-    print("Check Braintrust dashboard for the traces:")
-    print("https://www.braintrust.dev/")

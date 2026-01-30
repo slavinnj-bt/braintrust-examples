@@ -149,5 +149,3 @@ if __name__ == "__main__":
     run_conversation()
 
     print("\nConversation complete!")
-    print("Check Braintrust dashboard for the trace:")
-    print("https://www.braintrust.dev/")
