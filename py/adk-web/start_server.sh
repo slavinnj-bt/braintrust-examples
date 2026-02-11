@@ -42,6 +42,4 @@ echo "================================================"
 echo ""
 
 # Run the custom FastAPI server using uvicorn
-# Uses main_force_new_sessions.py (recommended for development)
-# For production, use: uvicorn main_production:app --port 3000
-uvicorn main_force_new_sessions:app --host 0.0.0.0 --port 3000
+uvicorn unified_tracing:app --host 0.0.0.0 --port 3000
