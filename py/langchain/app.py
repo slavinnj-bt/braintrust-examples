@@ -205,20 +205,12 @@ async def main(message: cl.Message):
     # Get turn number for tracking
     turn_number = len([m for m in message_history.messages if m.type == "human"]) + 1
 
-    # Format chat history for logging
-    chat_history = [
-        {"role": "user" if msg.type == "human" else "assistant", "content": msg.content}
-        for msg in message_history.messages
-    ]
-
     # Start a Braintrust span for this conversation turn as a child of the session span
     span = session_span.start_span(
         name="conversation_turn",
         input={
             "question": message.content,
-            "turn_number": turn_number,
-            "history_length": len(message_history.messages),
-            "chat_history": chat_history
+            "turn_number": turn_number
         },
         span_attributes={"type": "task"}
     )
@@ -275,7 +267,7 @@ async def main(message: cl.Message):
         # Log the LLM call within a child span of the turn span
         llm_span = span.start_span(
             name=f"{PROVIDER}_chat_completion",
-            input={"model": MODEL_NAME, "messages": messages, "temperature": 0},
+            input={"model": MODEL_NAME, "messages": [{"role": "user", "content": message.content}], "temperature": 0},
             span_attributes={"type": "llm"}
         )
         llm_span.set_current()
@@ -325,15 +317,6 @@ async def main(message: cl.Message):
                         content = delta.content
                         answer += content
                         await msg.stream_token(content)
-                        # Log the output continuously as we stream in scorer-friendly format
-                        span.log(output={
-                            "user_question": message.content,
-                            "assistant_answer": answer,
-                            "full_conversation": chat_history + [
-                                {"role": "user", "content": message.content},
-                                {"role": "assistant", "content": answer}
-                            ]
-                        })
 
             elif PROVIDER == "anthropic":
                 # Convert messages to Anthropic format
@@ -377,14 +360,6 @@ async def main(message: cl.Message):
                                 content = event.delta.text
                                 answer += content
                                 await msg.stream_token(content)
-                                span.log(output={
-                                    "user_question": message.content,
-                                    "assistant_answer": answer,
-                                    "full_conversation": chat_history + [
-                                        {"role": "user", "content": message.content},
-                                        {"role": "assistant", "content": answer}
-                                    ]
-                                })
                             elif event.delta.type == "input_json_delta":
                                 if current_tool_call:
                                     current_tool_call["function"]["arguments"] += event.delta.partial_json
@@ -460,15 +435,6 @@ async def main(message: cl.Message):
                             content = chunk.choices[0].delta.content
                             answer += content
                             await msg.stream_token(content)
-                            # Log the output continuously as we stream in scorer-friendly format
-                            span.log(output={
-                                "user_question": message.content,
-                                "assistant_answer": answer,
-                                "full_conversation": chat_history + [
-                                    {"role": "user", "content": message.content},
-                                    {"role": "assistant", "content": answer}
-                                ]
-                            })
 
                 elif PROVIDER == "anthropic":
                     # Convert messages to Anthropic format for final call
@@ -533,22 +499,19 @@ async def main(message: cl.Message):
                                 content = event.delta.text
                                 answer += content
                                 await msg.stream_token(content)
-                                span.log(output={
-                                    "user_question": message.content,
-                                    "assistant_answer": answer,
-                                    "full_conversation": chat_history + [
-                                        {"role": "user", "content": message.content},
-                                        {"role": "assistant", "content": answer}
-                                    ]
-                                })
 
             # Log the completion
-            llm_span.log(output={"content": answer})
+            llm_span.log(output={"role": "assistant", "content": answer})
         finally:
             llm_span.end()
 
         # Add AI response to history
         message_history.add_ai_message(answer)
+
+        # Log the final output for this turn
+        span.log(output={
+            "answer": answer
+        })
     finally:
         span.end()
 
@@ -581,23 +544,10 @@ async def on_chat_end():
     if session_span:
         message_history = cl.user_session.get("message_history")
 
-        # Format full conversation history for evaluation
-        full_conversation = [
-            {"role": "user" if msg.type == "human" else "assistant", "content": msg.content}
-            for msg in message_history.messages
-        ]
-
-        # Build output for root span evaluation with question and assistant_answer
-        output = {
-            "full_conversation": full_conversation,
-            "num_turns": len(full_conversation)
-        }
-
-        # Add question and assistant_answer for scorer compatibility
-        if len(full_conversation) > 0:
-            output["question"] = full_conversation[0]["content"]
-        if len(full_conversation) > 1:
-            output["assistant_answer"] = full_conversation[-1]["content"]
-
-        session_span.log(output=output)
+        # Log summary information for the session
+        num_turns = len([m for m in message_history.messages if m.type == "human"])
+        session_span.log(output={
+            "num_turns": num_turns,
+            "status": "completed"
+        })
         session_span.end()
