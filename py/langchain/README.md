@@ -1,101 +1,69 @@
-# Chainlit App - OpenAI & Anthropic Support
+# LangChain + Braintrust Examples
 
-This Chainlit application supports both OpenAI and Anthropic AI providers.
+This directory contains examples of using LangChain with Braintrust for evaluation and observability.
 
-## Installation
+## Chainlit Chatbot
 
-The virtual environment is already set up with Python 3.13.
+A Chainlit application supporting OpenAI and Anthropic AI providers with RAG and web search.
 
-**Important**: Use the parent directory's venv (from the repository root):
-
-```bash
-cd /Users/nick.slavin/repos/braintrust-examples
-source .venv/bin/activate
-cd py
-```
-
-Or activate from the py directory:
+### Quick Start
 
 ```bash
-cd /Users/nick.slavin/repos/braintrust-examples/py
+# Use the parent directory's venv
 source ../.venv/bin/activate
-```
 
-All dependencies are already installed and upgraded.
+# Set API keys
+export OPENAI_API_KEY="your-key"
+export ANTHROPIC_API_KEY="your-key"
+export TAVILY_API_KEY="your-key"
+export BRAINTRUST_API_KEY="your-key"
 
-## Environment Variables
-
-Set the required API keys:
-
-```bash
-export OPENAI_API_KEY="your-openai-key"           # For OpenAI provider
-export ANTHROPIC_API_KEY="your-anthropic-key"     # For Anthropic provider
-export TAVILY_API_KEY="your-tavily-key"           # For web search
-export BRAINTRUST_API_KEY="your-braintrust-key"   # For logging
-```
-
-Configure which provider to use:
-
-```bash
-export AI_PROVIDER="openai"      # or "anthropic" (default: openai)
-export AI_MODEL="gpt-4"          # Optional: override default model
-```
-
-## Usage
-
-### Using OpenAI (Default)
-```bash
+# Run the app
 chainlit run app.py
 ```
 
-### Using Anthropic
-```bash
-AI_PROVIDER=anthropic chainlit run app.py
-```
-
-### Specifying a Custom Model
-
-```bash
-# With OpenAI
-AI_MODEL=gpt-4 chainlit run app.py
-
-# With Anthropic
-AI_PROVIDER=anthropic AI_MODEL=claude-3-opus-20240229 chainlit run app.py
-```
-
-## Default Models
-
-- **OpenAI**: `gpt-4o-mini`
-- **Anthropic**: `claude-3-5-sonnet-20241022`
-
-## Features
-
-- PDF document upload and processing
-- RAG (Retrieval-Augmented Generation) with vector search
-- Web search integration via Tavily
-- Conversation history tracking
-- Braintrust logging and tracing
+### Features
+- PDF document upload and RAG
+- Web search via Tavily
+- Conversation tracking
+- Braintrust logging
 - Streaming responses
-- Tool calling support (web search)
 
-## Troubleshooting
+## Remote Eval for Chatbots
 
-### OpenTelemetry Import Errors
+A flexible evaluation framework for testing chatbots with different AI providers and models.
 
-If you encounter `ImportError: cannot import name 'ReadableLogRecord'`:
-
-1. Make sure you're using the correct virtual environment (parent directory's .venv)
-2. Upgrade OpenTelemetry packages:
+### Quick Start
 
 ```bash
-cd /Users/nick.slavin/repos/braintrust-examples
-source .venv/bin/activate
-pip install --upgrade opentelemetry-api opentelemetry-sdk opentelemetry-exporter-otlp-proto-common opentelemetry-exporter-otlp-proto-grpc opentelemetry-exporter-otlp-proto-http
+# Install dependencies
+pip install braintrust openai anthropic python-dotenv autoevals
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your API keys
+
+# Create sample dataset
+python create_sample_dataset.py
+
+# Start eval server
+braintrust eval remote_chatbot_eval.py --dev
 ```
 
-### Verify Installation
+### Configuration
 
+Set defaults in `.env`:
 ```bash
-source .venv/bin/activate
-python -c "from opentelemetry.sdk._logs import LoggerProvider; print('✓ OpenTelemetry working')"
+AI_PROVIDER=openai  # or anthropic
+AI_MODEL=gpt-4o-mini  # or claude-sonnet-4-5-20250929
 ```
+
+### Using in Braintrust
+
+1. Register endpoint at `http://localhost:8300` in Braintrust → Configuration → Remote evals
+2. Open Playground and select your remote eval
+3. Configure provider, model, system prompt via UI
+4. Run evaluations on your dataset
+
+For more details, see the individual script files and comments.
+

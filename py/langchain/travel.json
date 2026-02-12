@@ -1,0 +1,122 @@
+[
+  {
+    "classifications": null,
+    "comments": null,
+    "created": "2026-02-12T12:53:59.776Z",
+    "expected": null,
+    "facets": null,
+    "id": "1fbbdbd6-c4f4-46c1-9d96-dc13908d0275",
+    "input": "Which Caribbean island has the best beaches for families?",
+    "metadata": null,
+    "root_span_id": "1fbbdbd6-c4f4-46c1-9d96-dc13908d0275",
+    "tags": null
+  },
+  {
+    "classifications": null,
+    "comments": null,
+    "created": "2026-02-12T12:53:59.776Z",
+    "expected": null,
+    "facets": null,
+    "id": "15ea68a8-81a1-4aff-8d91-ad40bfacb8d3",
+    "input": "What are the visa requirements for visiting Australia?",
+    "metadata": null,
+    "root_span_id": "15ea68a8-81a1-4aff-8d91-ad40bfacb8d3",
+    "tags": null
+  },
+  {
+    "classifications": null,
+    "comments": null,
+    "created": "2026-02-12T12:53:59.776Z",
+    "expected": null,
+    "facets": null,
+    "id": "93466dab-82ac-43fd-97ad-ade8be8d8f6a",
+    "input": "Can I bring my dog on an international flight?",
+    "metadata": null,
+    "root_span_id": "93466dab-82ac-43fd-97ad-ade8be8d8f6a",
+    "tags": null
+  },
+  {
+    "classifications": null,
+    "comments": null,
+    "created": "2026-02-12T12:53:59.776Z",
+    "expected": null,
+    "facets": null,
+    "id": "b5c42adb-15dd-45d9-90b1-cc28a6f7b745",
+    "input": "What is the best time to visit the Swiss Alps for skiing?",
+    "metadata": null,
+    "root_span_id": "b5c42adb-15dd-45d9-90b1-cc28a6f7b745",
+    "tags": null
+  },
+  {
+    "classifications": null,
+    "comments": null,
+    "created": "2026-02-12T12:53:59.776Z",
+    "expected": null,
+    "facets": null,
+    "id": "9a3ab636-b988-4ea6-8508-c59ddc703cb7",
+    "input": "How much does a typical week-long cruise cost?",
+    "metadata": null,
+    "root_span_id": "9a3ab636-b988-4ea6-8508-c59ddc703cb7",
+    "tags": null
+  },
+  {
+    "classifications": null,
+    "comments": null,
+    "created": "2026-02-12T12:53:59.776Z",
+    "expected": null,
+    "facets": null,
+    "id": "48d11a06-aed8-4030-a782-631de02a0234",
+    "input": "Is it safe to travel to Thailand during monsoon season?",
+    "metadata": null,
+    "root_span_id": "48d11a06-aed8-4030-a782-631de02a0234",
+    "tags": null
+  },
+  {
+    "classifications": null,
+    "comments": null,
+    "created": "2026-02-12T12:53:59.776Z",
+    "expected": null,
+    "facets": null,
+    "id": "6b92915e-1578-4961-8d88-fe5a48352747",
+    "input": "What are the top-rated restaurants in Barcelona?",
+    "metadata": null,
+    "root_span_id": "6b92915e-1578-4961-8d88-fe5a48352747",
+    "tags": null
+  },
+  {
+    "classifications": null,
+    "comments": null,
+    "created": "2026-02-12T01:40:07.615Z",
+    "expected": null,
+    "facets": null,
+    "id": "a8df2695-eb3b-4e7e-9955-0a1484327558",
+    "input": "Where is Mont Saint Michel located?",
+    "metadata": null,
+    "root_span_id": "a8df2695-eb3b-4e7e-9955-0a1484327558",
+    "tags": null
+  },
+  {
+    "classifications": null,
+    "comments": null,
+    "created": "2026-02-12T01:39:38.395Z",
+    "expected": null,
+    "facets": null,
+    "id": "e690dc6e-85c2-498a-a5d7-6ad5d8f5aa45",
+    "input": "How long is the flight from LA to Tokyo?",
+    "metadata": null,
+    "root_span_id": "e690dc6e-85c2-498a-a5d7-6ad5d8f5aa45",
+    "tags": null
+  },
+  {
+    "classifications": null,
+    "comments": null,
+    "created": "2026-02-12T01:39:07.516Z",
+    "expected": null,
+    "facets": null,
+    "id": "cf399c63-fade-4e35-8343-10760c8762db",
+    "input": "What is the best place in Mexico to visit?",
+    "metadata": null,
+    "root_span_id": "cf399c63-fade-4e35-8343-10760c8762db",
+    "tags": null
+  }
+]
