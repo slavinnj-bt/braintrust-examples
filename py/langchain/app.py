@@ -50,9 +50,11 @@ if not MODEL_NAME:
     else:
         MODEL_NAME = "gpt-4o-mini"
 
-SYSTEM_PROMPT=""
-with open("system_prompt.txt","r") as f:
-    SYSTEM_PROMPT = f.read()
+# Load system prompt: from env var (for custom use cases like legal assistant) or from file (default RAG prompt)
+SYSTEM_PROMPT = os.environ.get("SYSTEM_PROMPT")
+if not SYSTEM_PROMPT:
+    with open("system_prompt.txt", "r") as f:
+        SYSTEM_PROMPT = f.read()
 
 logger = init_logger(project="SlavinScratchArea", api_key=os.environ.get("BRAINTRUST_API_KEY"))
 # Create handler but don't set as global - we'll pass it explicitly to avoid duplicate spans
@@ -70,7 +72,7 @@ tools = [
         "type": "function",
         "function": {
             "name": "tavily_search",
-            "description": "Search the web for current information. Use this when you need up-to-date information about laws, regulations, legal precedents, or other information not contained in the document.",
+            "description": "Search the web for current information. Use this when you need up-to-date information not contained in the document, such as recent developments, news, or additional context.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -89,7 +91,7 @@ tools = [
 anthropic_tools = [
     {
         "name": "tavily_search",
-        "description": "Search the web for current information. Use this when you need up-to-date information about laws, regulations, legal precedents, or other information not contained in the document.",
+        "description": "Search the web for current information. Use this when you need up-to-date information not contained in the document, such as recent developments, news, or additional context.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -116,7 +118,7 @@ async def on_chat_start():
     # Wait for the user to upload a file
     while files is None:
         files = await cl.AskFileMessage(
-            content="Hi, I'm Allex! Upload your document!",
+            content="Hi! Upload a document to get started.",
             accept=["application/pdf"],
             max_size_mb=20,
             timeout=180,

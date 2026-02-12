@@ -18,7 +18,11 @@ export ANTHROPIC_API_KEY="your-key"
 export TAVILY_API_KEY="your-key"
 export BRAINTRUST_API_KEY="your-key"
 
-# Run the app
+# Run with default generic RAG prompt
+chainlit run app.py
+
+# Or use a custom system prompt (e.g., for legal assistant)
+export SYSTEM_PROMPT="$(cat legal_assistant_prompt.txt)"
 chainlit run app.py
 ```
 
@@ -28,6 +32,27 @@ chainlit run app.py
 - Conversation tracking
 - Braintrust logging
 - Streaming responses
+- Configurable system prompts for different use cases
+
+### System Prompt Configuration
+
+The app uses a default generic RAG prompt from `system_prompt.txt`. To customize for specific use cases:
+
+**Option 1: Use environment variable**
+```bash
+export SYSTEM_PROMPT="Your custom prompt here"
+chainlit run app.py
+```
+
+**Option 2: Load from a file**
+```bash
+export SYSTEM_PROMPT="$(cat legal_assistant_prompt.txt)"
+chainlit run app.py
+```
+
+**Example use cases:**
+- `legal_assistant_prompt.txt` - For legal/financial documents
+- Create your own for: medical documents, technical manuals, research papers, etc.
 
 ## Remote Eval for Chatbots
 
