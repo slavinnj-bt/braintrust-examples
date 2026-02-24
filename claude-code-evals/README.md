@@ -7,6 +7,7 @@ Evaluates Claude Code's ability to use tools to solve programming tasks — writ
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installed and on your `PATH` as `claude`
   - Authenticated via `claude auth login`, or `ANTHROPIC_API_KEY` set in your environment
 - A [Braintrust](https://braintrust.dev) account with `BRAINTRUST_API_KEY` set
+- An OpenAI API key (`OPENAI_API_KEY`) for the LLM-based scorers
 
 ## Setup
 
@@ -27,6 +28,7 @@ Results are logged to the `claude-code-eval` project in Braintrust.
 | Variable | Default | Description |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | — | Anthropic API key used by the `claude` subprocess |
+| `OPENAI_API_KEY` | — | OpenAI API key used by the LLM-based scorers |
 | `BRAINTRUST_API_KEY` | — | Braintrust API key (required for logging and LLM scorers) |
 | `CLAUDE_BIN` | `claude` | Path to the Claude Code binary |
 | `BRAINTRUST_PROJECT` | `claude-code-eval` | Braintrust project name to log results to |
@@ -46,7 +48,7 @@ Each question requires Claude Code to write and execute code rather than answer 
 
 ## Scoring
 
-Each response is evaluated by two LLM-based scorers powered by `claude-haiku-4-5-20251001` via the Braintrust AI proxy:
+Each response is evaluated by two LLM-based scorers powered by `gpt-4o-mini` via the Braintrust AI proxy:
 
 | Scorer | Description |
 |---|---|

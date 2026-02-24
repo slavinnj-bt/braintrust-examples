@@ -1,18 +1,8 @@
 import { Eval, currentSpan } from "braintrust";
-import { Factuality, LLMClassifierFromSpec, init } from "autoevals";
-import { OpenAI } from "openai";
+import { Factuality, LLMClassifierFromSpec } from "autoevals";
 import { execFileSync } from "child_process";
 
-// Route autoevals LLM scorer calls through the Braintrust AI proxy so they
-// authenticate with BRAINTRUST_API_KEY instead of requiring OPENAI_API_KEY.
-init({
-  client: new OpenAI({
-    apiKey: process.env.BRAINTRUST_API_KEY,
-    baseURL: "https://api.braintrust.dev/v1/proxy",
-  }),
-  defaultModel: "claude-haiku-4-5-20251001",
-});
-
+// Uses OpenAI
 const Conciseness = LLMClassifierFromSpec("Conciseness", {
   prompt: `You are evaluating whether an AI assistant's response is concise.
 
@@ -31,7 +21,7 @@ The task asks the assistant to execute code and return the printed output. A con
 (C) The response is verbose — it includes lengthy explanations, descriptions of steps taken, or other content well beyond the bare output.`,
   choice_scores: { A: 1, B: 0.5, C: 0 },
   use_cot: true,
-  model: "claude-haiku-4-5-20251001",
+  model: "gpt-4o-mini",
 });
 
 const CLAUDE_BIN = process.env.CLAUDE_BIN ?? "claude";
