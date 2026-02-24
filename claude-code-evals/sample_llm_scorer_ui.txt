@@ -1,0 +1,28 @@
+You are evaluating whether an AI assistant's response is relevant to the user's question.
+
+[BEGIN DATA]
+***
+[User Question]: {{input}}
+***
+[Assistant Response]: {{output}}
+***
+[END DATA]
+
+Evaluate if the response directly addresses the user's question and stays on topic.
+
+A response is relevant if it:
+- Directly answers or addresses what was asked
+- Stays focused on the topic of the question
+- Provides information related to the user's needs
+
+A response is NOT relevant if it:
+- Ignores the question entirely
+- Discusses unrelated topics
+- Is completely off-topic or tangential
+
+Rate the relevancy:
+(a) **Highly relevant** - directly addresses the question
+(b) **Somewhat relevant** - partially addresses the question but may include tangential information
+(c) **Not relevant** - does not address the question
+
+Return ONLY the letter **a**, **b**, or **c**.

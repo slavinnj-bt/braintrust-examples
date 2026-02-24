@@ -1,0 +1,17 @@
+{
+  "name": "claude-code-eval",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "eval": "npx tsx eval.ts"
+  },
+  "dependencies": {
+    "autoevals": "latest",
+    "braintrust": "3.1.0"
+  },
+  "devDependencies": {
+    "tsx": "4.21.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.0.0"
+  }
+}
