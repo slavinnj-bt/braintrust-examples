@@ -1,6 +1,6 @@
 # repro_agent
 
-Aach ADK turn in a multi-turn conversation creates a **separate root-level trace** in Braintrust instead of being grouped under a single session.
+Each ADK turn in a multi-turn conversation creates a **separate root-level trace** in Braintrust instead of being grouped under a single session.
 
 
 **Expected:** One Braintrust log entry per conversation session, with each turn nested inside as child spans.
@@ -29,6 +29,8 @@ Authenticate with Google Cloud:
 ```bash
 gcloud auth application-default login
 ```
+
+Alternatively, provide a `GEMINI_API_KEY`.
 
 ## Run
 
