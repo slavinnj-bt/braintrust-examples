@@ -12,7 +12,6 @@ Each ADK turn in a multi-turn conversation creates a **separate root-level trace
 ## Setup
 
 ```bash
-cd adk-session-traces-repro
 cp .env.example .env  # fill in your keys
 pip install -r requirements.txt
 ```
