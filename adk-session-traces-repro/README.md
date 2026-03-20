@@ -22,6 +22,10 @@ Using a stable, deterministic ID means that every turn in the same ADK session r
 
 The patch uses `__enter__`/`__exit__` directly instead of a `with` block because Python doesn't allow `with` to span a `yield` boundary in a generator, and `Runner.run` is a generator that yields ADK events.
 
+## Video Demo
+
+Watch on [Loom](https://www.loom.com/share/331bcd7c04574a9ebd1e7e6348f0189d)
+
 ## Setup
 
 ```bash
