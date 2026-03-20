@@ -21,7 +21,7 @@ logger = init_logger(project=PROJECT_NAME)
 
 from google.adk.agents import LlmAgent
 from google.adk.runners import Runner
-from google.adk.tools import google_search
+from google.adk.code_executors import BuiltInCodeExecutor
 
 
 def _make_session_span(session_id):
@@ -40,8 +40,11 @@ def _session_run_wrapper(wrapped, _instance, args, kwargs):
 
     if session_id:
         session_span = _make_session_span(session_id)
+        # Use __enter__/__exit__ explicitly instead of `with` — Python doesn't
+        # allow `with` to span a `yield` boundary in a generator.
         session_span.__enter__()
         try:
+            # Re-yield all ADK events from the original generator to the caller.
             yield from wrapped(*args, **kwargs)
         finally:
             session_span.__exit__(None, None, None)
@@ -78,24 +81,9 @@ _WEATHER_DATA = {
 }
 
 
-def get_weather(location: str) -> dict:
-    """Returns the current weather for a given location.
-
-    Args:
-        location: The city or location to get weather for.
-
-    Returns:
-        A dict with condition and temperature, or an error if unknown.
-    """
-    data = _WEATHER_DATA.get(location.lower().strip())
-    if data:
-        return {"location": location, **data}
-    return {"location": location, "condition": "Unknown", "temp_f": None}
-
-
 root_agent = LlmAgent(
     name="assistant",
     model="gemini-2.5-flash",
-    instruction="You are a helpful assistant. Keep responses very brief.",
-    tools=[get_weather],
+    code_executor=BuiltInCodeExecutor(),
+    instruction="You are a mathematical tutor. You use code to perform complex calculations. Always explain your work.",
 )
